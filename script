@@ -2,7 +2,7 @@ import telebot
 from telebot import types
 import random
 
-bot = telebot.TeleBot("8960858066:AAHuFU0G237xle1I4roZpotYIBpmFQXg_Dk")
+bot = telebot.TeleBot("your_token")
 
 #Эко-факты
 eco_facts = [
