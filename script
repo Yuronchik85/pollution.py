@@ -1,0 +1,139 @@
+import telebot
+from telebot import types
+import random
+
+bot = telebot.TeleBot("8960858066:AAHuFU0G237xle1I4roZpotYIBpmFQXg_Dk")
+
+#Эко-факты
+eco_facts = [
+    "Одна пальчиковая батарейка загрязняет около 20 кв. метров земли тяжелыми металлами. Сдавай их в пункты приема! 🔋",
+    "Пластиковый стаканчик для кофе разлагается около 500 лет. Лучше ходить со своей термокружкой. ☕",
+    "Стеклянная бутылка может разлагаться на свалке до 1000 лет, но ее можно перерабатывать бесконечно! 🫙",
+    "Для производства одной тонны бумаги нужно срубить примерно 17 деревьев. Экономь бумагу! 🌳",
+    "Каждую минуту в мире покупают около 1 миллиона пластиковых бутылок. Используй многоразовые фляги. 🥤",
+    "Обычный пакет из магазина используется в среднем всего 12 минут, а разлагается сотни лет. Носи шоппер! 🛍️"
+]
+
+#Вопросы викторины
+quiz_questions = [
+    {
+        "text": "Какой материал можно перерабатывать бесконечное количество раз?",
+        "answers": ["Пластик", "Стекло", "Бумага"],
+        "correct": 1
+    },
+    {
+        "text": "Сколько времени разлагается обычный пластиковый пакет?",
+        "answers": ["До 20 лет", "Около 100-400 лет", "Всего 5 лет"],
+        "correct": 1
+    },
+    {
+        "text": "Какая привычка экономит больше всего воды в быту?",
+        "answers": ["Закрывать кран при чистке зубов", "Мыть посуду руками", "Реже мыть полы"],
+        "correct": 0
+    },
+    {
+        "text": "Что из этого НЕЛЬЗЯ сдавать в обычную макулатуру?",
+        "answers": ["Школьные тетради", "Картонные коробки", "Чеки из магазинов"],
+        "correct": 2  
+    }
+]
+
+
+#Меню
+def get_main_keyboard():
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    btn_fact = types.KeyboardButton("🌱 Эко-факт дня")
+    btn_tips = types.KeyboardButton("💡 Полезные привычки")
+    btn_quiz = types.KeyboardButton("❓ Эко-викторина")
+    
+    markup.add(btn_fact, btn_tips)
+    markup.add(btn_quiz)
+    return markup
+
+
+#Старт
+@bot.message_handler(commands=['start'])
+def send_welcome(message):
+    welcome_text = (
+        f"Привет, {message.from_user.first_name}! 👋\n\n"
+        "Рад видеть тебя здесь! Этот бот создан для тех, кто хочет сделать нашу планету чище. "
+        "Даже маленькие привычки могут изменить мир! 🌍\n\n"
+        "Выбери действие на кнопках ниже, чтобы начать:"
+    )
+    bot.send_message(message.chat.id, welcome_text, reply_markup=get_main_keyboard())
+
+
+#Обработка обычных кнопок
+@bot.message_handler(content_types=['text'])
+def handle_text_buttons(message):
+    
+    if message.text == "🌱 Эко-факт дня":
+        #Рандом факт
+        random_fact = random.choice(eco_facts)
+        bot.send_message(message.chat.id, f"💡 **Интересный факт:**\n\n{random_fact}", parse_mode="Markdown")
+        
+    elif message.text == "💡 Полезные привычки":
+        tips_text = (
+            "Вот 3 простых шага к экологичной жизни:\n\n"
+            "1️⃣ **Носи шоппер.** Замени пластиковые пакеты тканевой сумкой.\n"
+            "2️⃣ **Выключай воду.** Закрывай кран, пока чистишь зубы.\n"
+            "3️⃣ **Откажись от пластика.** Используй многоразовые бутылки для воды."
+        )
+        bot.send_message(message.chat.id, tips_text, parse_mode="Markdown")
+        
+    elif message.text == "❓ Эко-викторина":
+        #Случайный вопрос из словаря
+        q_index = random.randint(0, len(quiz_questions) - 1)
+        question = quiz_questions[q_index]
+        
+        #Инлай-кнопка для выбора ответа
+        quiz_markup = types.InlineKeyboardMarkup()
+        
+        for i, answer in enumerate(question["answers"]):
+            btn = types.InlineKeyboardButton(text=answer, callback_data=f"quiz_{q_index}_{i}")
+            quiz_markup.add(btn)
+        
+        bot.send_message(
+            message.chat.id, 
+            f"🧠 **Вопрос:**\n\n{question['text']}",
+            reply_markup=quiz_markup,
+            parse_mode="Markdown"
+        )
+    else:
+        bot.send_message(
+            message.chat.id, 
+            "Я не знаю такой команды. Нажми на кнопку из меню ниже 👇", 
+            reply_markup=get_main_keyboard()
+        )
+
+
+#Проверка ответов из викториныы
+@bot.callback_query_handler(func=lambda call: call.data.startswith('quiz_'))
+def handle_quiz_answers(call):
+    data_parts = call.data.replace("quiz_", "").split("_")
+    q_index = int(data_parts[0])
+    chosen_answer_index = int(data_parts[1])
+    
+    question = quiz_questions[q_index]
+    correct_index = question["correct"]
+    
+    if chosen_answer_index == correct_index:
+        bot.answer_callback_query(call.id, text="Правильно! 🎉", show_alert=True)
+        bot.edit_message_text(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,
+            text=f"✅ **Верно!**\n\n{question['text']}\n👉 Твой ответ: *{question['answers'][chosen_answer_index]}*",
+            parse_mode="Markdown"
+        )
+    else:
+        bot.answer_callback_query(call.id, text="Неверно 😔", show_alert=False)
+        bot.edit_message_text(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,
+            text=f"❌ **Неправильно.**\n\n{question['text']}\n👉 Правильный ответ: *{question['answers'][correct_index]}*",
+            parse_mode="Markdown"
+        )
+
+
+print("Робот запущен...")
+bot.polling(none_stop=True)
